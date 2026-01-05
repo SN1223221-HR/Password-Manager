@@ -1,0 +1,85 @@
+<script>
+  // タブ切り替え
+  function openTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabName + 'Tab').classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  // 初期ロード：検索候補取得
+  window.onload = () => {
+    google.script.run.withSuccessHandler(names => {
+      const list = document.getElementById('nameList');
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        list.appendChild(opt);
+      });
+    }).getCredentialNames();
+  };
+
+  // 検索
+  function search() {
+    const name = document.getElementById('nameInput').value;
+    google.script.run.withSuccessHandler(data => {
+      const area = document.getElementById('resultArea');
+      area.style.display = 'block';
+      if (!data) {
+        area.innerHTML = '<p style="color:red">見つかりません</p>';
+        return;
+      }
+      area.innerHTML = `
+        ${renderRow('ID', data.id)}
+        ${renderRow('PASS', '●●●●●●', data.pass)}
+        ${renderRow('URL', data.url)}
+        ${renderRow('MEMO', data.memo || '-')}
+      `;
+    }).getCredentialByName(name);
+  }
+
+  function renderRow(label, displayVal, realVal = null) {
+    const valToCopy = realVal || displayVal;
+    return `
+      <div class="res-row">
+        <div class="res-label">${label}</div>
+        <div class="res-value" id="val-${label}">${displayVal}</div>
+        <button class="copy-btn" onclick="copyToClip('${valToCopy.replace(/'/g, "\\'")}')">Copy</button>
+        ${realVal ? `<button class="copy-btn" style="right:45px" onclick="togglePlain('${realVal}', 'val-${label}')">👁</button>` : ''}
+      </div>`;
+  }
+
+  function copyToClip(text) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    alert('コピーしました');
+  }
+
+  function togglePlain(realPass, id) {
+    const el = document.getElementById(id);
+    el.innerText = el.innerText === '●●●●●●' ? realPass : '●●●●●●';
+  }
+
+  // インポート
+  function handleImport() {
+    const fileInput = document.getElementById('csvFile');
+    const status = document.getElementById('importStatus');
+    if (fileInput.files.length === 0) return alert('ファイルを選択してください');
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    status.innerText = '解析中...';
+
+    reader.onload = function(e) {
+      google.script.run.withSuccessHandler(msg => {
+        status.innerText = msg;
+        alert(msg);
+      }).importPasswordsFromCsv(e.target.result);
+    };
+    reader.readAsText(file);
+  }
+</script>
