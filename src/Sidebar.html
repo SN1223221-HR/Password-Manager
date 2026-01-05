@@ -2,131 +2,32 @@
 <html>
   <head>
     <base target="_top">
-    <style>
-      body { font-family: sans-serif; padding: 10px; font-size: 14px; color: #333; }
-      .form-group { margin-bottom: 15px; }
-      label { display: block; margin-bottom: 5px; font-weight: bold; }
-      select, input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
-      button { 
-        width: 100%; padding: 10px; background-color: #4285f4; 
-        color: white; border: none; border-radius: 4px; cursor: pointer; 
-      }
-      button:hover { background-color: #357ae8; }
-      .result-area { 
-        margin-top: 20px; padding: 10px; border: 1px solid #ddd; 
-        background-color: #f9f9f9; display: none; 
-      }
-      .field { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-      .field-label { font-size: 11px; color: #666; }
-      .field-value { font-family: monospace; font-size: 1.1em; word-break: break-all; }
-      .pass-container { display: flex; align-items: center; }
-      .toggle-btn { 
-        margin-left: 5px; font-size: 11px; padding: 2px 5px; 
-        cursor: pointer; background: #eee; border: 1px solid #ccc;
-      }
-      .error { color: #d93025; font-weight: bold; }
-      #loading { color: #666; font-style: italic; display: none; }
-    </style>
+    <?!= include('SidebarCSS'); ?>
   </head>
   <body>
-
-    <div class="form-group">
-      <label>サイト名称</label>
-      <input type="text" id="nameInput" list="nameList" placeholder="選択または入力...">
-      <datalist id="nameList"></datalist>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="openTab('search')">検索</button>
+      <button class="tab-btn" onclick="openTab('import')">インポート</button>
     </div>
 
-    <button onclick="searchCredential()">検索</button>
-    <div id="loading">検索中...</div>
-
-    <div id="resultArea" class="result-area">
-      <div id="resultContent"></div>
+    <div id="searchTab" class="tab-content active">
+      <div class="form-group">
+        <label>名称で検索</label>
+        <input type="text" id="nameInput" list="nameList" placeholder="サイト名を選択...">
+        <datalist id="nameList"></datalist>
+      </div>
+      <button class="primary-btn" onclick="search()">検索実行</button>
+      
+      <div id="resultArea" class="result-area"></div>
     </div>
 
-    <script>
-      // 起動時に名称リストを取得してプルダウンにセット
-      window.onload = function() {
-        google.script.run
-          .withSuccessHandler(function(names) {
-            const list = document.getElementById('nameList');
-            names.forEach(name => {
-              const option = document.createElement('option');
-              option.value = name;
-              list.appendChild(option);
-            });
-          })
-          .getCredentialNames();
-      };
+    <div id="importTab" class="tab-content">
+      <p style="font-size:12px; color:666;">GoogleパスワードマネージャーからDLしたCSVを選択してください。</p>
+      <input type="file" id="csvFile" accept=".csv">
+      <button class="secondary-btn" onclick="handleImport()">CSVインポート開始</button>
+      <div id="importStatus"></div>
+    </div>
 
-      function searchCredential() {
-        const name = document.getElementById('nameInput').value;
-        if (!name) return;
-
-        const resultArea = document.getElementById('resultArea');
-        const resultContent = document.getElementById('resultContent');
-        const loading = document.getElementById('loading');
-
-        loading.style.display = 'block';
-        resultArea.style.display = 'none';
-
-        google.script.run
-          .withSuccessHandler(function(data) {
-            loading.style.display = 'none';
-            resultArea.style.display = 'block';
-
-            if (data) {
-              resultContent.innerHTML = `
-                <div class="field">
-                  <div class="field-label">ログインID</div>
-                  <div class="field-value">${escapeHtml(data.id)}</div>
-                </div>
-                <div class="field">
-                  <div class="field-label">パスワード</div>
-                  <div class="pass-container">
-                    <div id="passValue" class="field-value">●●●●●●</div>
-                    <button class="toggle-btn" onclick="togglePass('${escapeJs(data.pass)}')">表示</button>
-                  </div>
-                </div>
-                <div class="field">
-                  <div class="field-label">URL</div>
-                  <div class="field-value"><a href="${data.url}" target="_blank">${escapeHtml(data.url)}</a></div>
-                </div>
-                <div class="field">
-                  <div class="field-label">メモ</div>
-                  <div class="field-value">${escapeHtml(data.memo || '-')}</div>
-                </div>
-              `;
-            } else {
-              resultContent.innerHTML = '<p class="error">該当する名称が見つかりません</p>';
-            }
-          })
-          .getCredentialByName(name);
-      }
-
-      function togglePass(realPass) {
-        const passElem = document.getElementById('passValue');
-        const btn = event.target;
-        if (passElem.innerText === '●●●●●●') {
-          passElem.innerText = realPass;
-          btn.innerText = '隠す';
-        } else {
-          passElem.innerText = '●●●●●●';
-          btn.innerText = '表示';
-        }
-      }
-
-      // XSS対策のサニタイズ
-      function escapeHtml(str) {
-        if(!str) return "";
-        return str.replace(/[&<>"']/g, function(m) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
-        });
-      }
-      // JS文字列内への埋め込み対策
-      function escapeJs(str) {
-        if(!str) return "";
-        return str.replace(/'/g, "\\'");
-      }
-    </script>
+    <?!= include('SidebarJS'); ?>
   </body>
 </html>
